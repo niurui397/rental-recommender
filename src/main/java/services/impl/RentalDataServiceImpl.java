@@ -1,32 +1,22 @@
 package services.impl;
 
+import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.mahout.cf.taste.impl.common.FastByIDMap;
-import org.apache.mahout.cf.taste.impl.model.GenericDataModel;
-import org.apache.mahout.cf.taste.impl.model.GenericPreference;
-import org.apache.mahout.cf.taste.impl.model.GenericUserPreferenceArray;
-import org.apache.mahout.cf.taste.impl.model.MemoryIDMigrator;
-import org.apache.mahout.cf.taste.impl.recommender.GenericBooleanPrefItemBasedRecommender;
-import org.apache.mahout.cf.taste.impl.similarity.LogLikelihoodSimilarity;
-import org.apache.mahout.cf.taste.model.DataModel;
-import org.apache.mahout.cf.taste.model.Preference;
-import org.apache.mahout.cf.taste.model.PreferenceArray;
-import org.apache.mahout.cf.taste.recommender.Recommender;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dao.RentalDataDAO;
+import dao.impl.RentalDataJdbcDAOImpl;
+import entity.CoEfficients;
 import entity.Recommendation;
 import entity.RentalData;
 import services.RentalDataService;
@@ -36,24 +26,48 @@ public class RentalDataServiceImpl implements RentalDataService {
 	
 	@Autowired
 	RentalDataDAO rentalDataDAO;
+	
+	Logger log = Logger.getLogger(RentalDataJdbcDAOImpl.class);
 
 	@Override
 	public void storeRentalDataFromCSV(String csvFilePath) throws IOException, SQLException {
 		List<RentalData> rentalDataList = parseCSV(csvFilePath);
-		rentalDataDAO.insertRentalDataList(rentalDataList);
+		rentalDataDAO.saveRentalDataList(rentalDataList);
 	}
 	
 	@Override
 	public void storeRentalData(List<RentalData> rentalDataList) throws IOException, SQLException {
-		rentalDataDAO.insertRentalDataList(rentalDataList);
+		rentalDataDAO.saveRentalDataList(rentalDataList);
 	}
 
 	@Override
 	public Recommendation getRecommendataion(RentalData rentalData) {
-		return new Recommendation(rentalData.getBedroomCount(), 
-								rentalData.getBathroomCount(), 
-								rentalData.getSquareFeet(),
-								1000, 12, 30);
+		Recommendation recommendation = null;
+		CoEfficients coef = null;
+		double minPricePerSqft = -1;
+		double maxPricePerSqft = -1;
+		try {
+			coef = rentalDataDAO.getCoEfficients();
+			minPricePerSqft = rentalDataDAO.getMinPerSqft(rentalData);
+			maxPricePerSqft = rentalDataDAO.getMaxPerSqft(rentalData);
+		} catch (SQLException e) {
+			log.error("Error getting coefficients from database", e);
+		}
+		if (coef == null) {
+			coef = getCoEfficientsFromPythonScriptResult();
+			try {
+				minPricePerSqft = rentalDataDAO.getMinPerSqft(rentalData);
+				maxPricePerSqft = rentalDataDAO.getMaxPerSqft(rentalData);
+				if (coef != null) {
+					rentalDataDAO.saveCoEfficients(coef);
+				}
+			} catch (SQLException e) {
+				log.error("Error saving coefficients to database", e);
+			}
+			int recommendPrice = (int) calculateRecommendationPrice(rentalData, coef);
+			recommendation = new Recommendation(rentalData.getBedroomCount(), rentalData.getBathroomCount(), rentalData.getSquareFeet(), recommendPrice, minPricePerSqft, maxPricePerSqft);
+		}
+		return recommendation;
 	}
 
 	@Override
@@ -71,55 +85,37 @@ public class RentalDataServiceImpl implements RentalDataService {
 		}
 		return rentalDataList;
 	}
-
-//	@Override
-//	public Recommender buildRecommender(String csvFilePath) {
-//		Recommender recommender = null;
-//		MemoryIDMigrator thing2long = new MemoryIDMigrator();
-//		DataModel dataModel = null;
-//		Map<Long,List<Preference>> preferecesOfUsers = new HashMap<Long,List<Preference>>();
-//
-//		List<RentalData> rentalDataList = parseCSV(csvFilePath);
-//
-//		for (RentalData rentalData : rentalDataList) {
-//			List<Preference> userPrefList;
-//
-//			String person = line[0];
-//			String likeName = line[1];
-//
-//			// store the mapping for the user
-//			long userLong = thing2long.toLongID(person);
-//			thing2long.storeMapping(userLong, person);
-//
-//			// store the mapping for the item
-//			long itemLong = thing2long.toLongID(likeName);
-//			thing2long.storeMapping(itemLong, likeName);
-//
-//			if((userPrefList = preferecesOfUsers.get(userLong)) == null) {
-//				userPrefList = new ArrayList<Preference>();
-//				preferecesOfUsers.put(userLong, userPrefList);
-//			}
-//			// add the similarities found to this user
-//			userPrefList.add(new GenericPreference(userLong, itemLong, 1));
-//		}
-//
-//		// create the corresponding mahout data structure from the map
-//		FastByIDMap<PreferenceArray> preferecesOfUsersFastMap = new FastByIDMap<PreferenceArray>();
-//		for(Entry<Long, List<Preference>> entry : preferecesOfUsers.entrySet()) {
-//			preferecesOfUsersFastMap.put(entry.getKey(), new GenericUserPreferenceArray(entry.getValue()));
-//		}
-//
-//		// create a data model
-//		dataModel = new GenericDataModel(preferecesOfUsersFastMap);
-//
-//		// Recommender Instantiation
-//		return new GenericBooleanPrefItemBasedRecommender(dataModel, new LogLikelihoodSimilarity(dataModel));
-//	}
-
-//	@Override
-//	public Recommender buildRecommender(List<RentalData> rentalDataList) {
-//		// TODO Auto-generated method stub
-//		return null;
-//	}
+	
+	private CoEfficients getCoEfficientsFromPythonScriptResult() {
+		BufferedReader br = null;
+		CoEfficients coef = null;
+		try {
+			String sCurrentLine;
+			br = new BufferedReader(new FileReader("coefficients.txt"));
+			if ((sCurrentLine = br.readLine()) != null) {
+				String[] tokens = sCurrentLine.split(",");
+				double bedroomCoef = Double.parseDouble(tokens[0].trim());
+				double bathroomCoef = Double.parseDouble(tokens[1].trim());
+				double squareFeetCoef = Double.parseDouble(tokens[2].trim());
+				double intercept = Double.parseDouble(tokens[3].trim());
+				coef = new CoEfficients(bedroomCoef, bathroomCoef, squareFeetCoef, intercept);
+			}
+		} catch (IOException e) {
+			log.error("Error to read coefficients from coefficients.txt", e);
+		} finally {
+			try {
+				if (br != null)br.close();
+			} catch (IOException ex) {
+			}
+		}
+		return coef;
+	}
+	
+	private double calculateRecommendationPrice(RentalData rentalData, CoEfficients coef) {
+		return rentalData.getBedroomCount() * coef.getBedroomCoef()
+				+ rentalData.getBedroomCount() * coef.getBathroomCoef()
+				+ rentalData.getSquareFeet() * coef.getSquareFeetCoef()
+				+ coef.getIntercept();
+	}
 
 }

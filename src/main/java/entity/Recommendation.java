@@ -9,12 +9,12 @@ public class Recommendation {
 	private int bathroomCount;
 	private int squareFeet;
 	private int recommendPrice;
-	private int minPricePerSqrFeet;
-	private int maxPricePerSqrFeet;
+	private double minPricePerSqrFeet;
+	private double maxPricePerSqrFeet;
 
 	public Recommendation() {}
 	
-	public Recommendation(int bedroomCount, int bathroomCount, int squareFeet, int recommendPrice, int minPricePerSqrFeet, int maxPricePerSqrFeet) {
+	public Recommendation(int bedroomCount, int bathroomCount, int squareFeet, int recommendPrice, double minPricePerSqrFeet, double maxPricePerSqrFeet) {
 		this.bedroomCount = bedroomCount;
 		this.bathroomCount = bathroomCount;
 		this.squareFeet = squareFeet;
@@ -47,13 +47,13 @@ public class Recommendation {
 	public void setRecommendPrice(int recommendPrice) {
 		this.recommendPrice = recommendPrice;
 	}
-	public int getMinPricePerSqrFeet() {
+	public double getMinPricePerSqrFeet() {
 		return minPricePerSqrFeet;
 	}
 	public void setMinPricePerSqrFeet(int minPricePerSqrFeet) {
 		this.minPricePerSqrFeet = minPricePerSqrFeet;
 	}
-	public int getMaxPricePerSqrFeet() {
+	public double getMaxPricePerSqrFeet() {
 		return maxPricePerSqrFeet;
 	}
 	public void setMaxPricePerSqrFeet(int maxPricePerSqrFeet) {

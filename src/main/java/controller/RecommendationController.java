@@ -22,7 +22,7 @@ public class RecommendationController {
 	
 	Logger log = Logger.getLogger(RecommendationController.class);
 
-	@CrossOrigin(origins = "*")
+	@CrossOrigin
 	@RequestMapping(value="/recommendation", method=RequestMethod.GET)
 	public ResponseEntity<Recommendation> recommendation(@RequestParam(value="bedroomCount", required=true) int bedroomCount, @RequestParam(value="bathroomCount", required=true) int bathroomCount, @RequestParam(value="squareFeet", required=true) int squareFeet) {
 		RentalData rentalData = new RentalData(bedroomCount, bathroomCount, squareFeet, -1);
