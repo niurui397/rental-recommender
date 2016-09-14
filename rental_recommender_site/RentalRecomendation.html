@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rental Pricing Recommendation</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+  <!-- Optional theme -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="css/style.css">
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">Home</a>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="jumbotron text-center">
+      <div class="container title-description">
+        <h1>Rental Pricing Recommendation</h1>
+        <p class="discription">Choose the details of your property and get a pricing recommendation for your rentals.</p>
+      </div>
+    </div>
+
+    <div class="row input-div">
+      <div class="col-sm-4 property-input">
+        <select class="form-control" id="bedroomSelect">
+          <option value="" selected disabled>Bedrooms</option>
+          <option value="0">Studio</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
+      </div>
+      <div class="col-sm-4 property-input">
+        <select class="form-control" id="bathroomSelect" required>
+          <option value="" selected disabled>Bathrooms</option>
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+      <div class="col-sm-4 property-input">
+        <input required type="text" id="squareFeet" class="form-control" placeholder="Square feet">
+      </div>
+      <div class="error-div" id="inputError"></div>
+      <button type="button" id="priceButton" class="btn btn-lg btn-success price-button">Get Price Recommendation</button>
+    </div>
+    <div class="result-div">
+      The average listing price for <span id="bedrooms"></span> bedrooms <span id="bathrooms"></span> bathrooms is between <span id="minSqrtFt"></span>/sq-ft and <span id="maxSqrtFt"></span>/sq-ft.</br>
+      The recommended listing price for your property is <span class="result-text" id="recommendation"></span>.
+    </div>
+  </div>
+
+  <script type="text/javascript" src="js/recommend.js"></script>
+</body>
+</html>
